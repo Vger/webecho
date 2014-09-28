@@ -32,7 +32,10 @@ function construct(get_request)
 	if set_sink then
 	    copas.addthread(function()
 		while sink == set_sink do
-		    http.request(get_request)
+		    local success, code, headers = http.request(get_request)
+		    if not success then
+			copas.sleep(1)
+		    end
 		end
 	    end)
 	end

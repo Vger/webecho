@@ -28,8 +28,8 @@ build = {
       ["webmeet.queue"] = "src/webmeet/queue.lua",
       ["webmeet.poster"] = "src/webmeet/poster.lua",
       ["webmeet.getter"] = "src/webmeet/getter.lua",
-      ["webmeet.client"] = "src/webmeet/client.lua",
-      ["webmeet.server"] = "src/webmeet/server.lua",
+      ["webmeet.requester"] = "src/webmeet/requester.lua",
+      ["webmeet.responder"] = "src/webmeet/responder.lua",
     },
   },
 }

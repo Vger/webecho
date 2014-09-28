@@ -5,85 +5,75 @@
 local socket = require "socket"
 local copas = require "copas"
 
-do
-    local copasmeta
+local wrapped = {}
+local copas_org_index
+local copasmeta
 
-    local function tcpreceive(self, pattern, prefix)
-	if (self.timeout==0) then
-	    local s, err, part = copas.receivePartial(self.socket, pattern)
-	    if not s and prefix and part then
-		return s, err, prefix .. part
-	    end
-	    return s, err, part
-	end
-	return copas.receive(self.socket, pattern, prefix)
+local function create_wrapped(key)
+    return function(self, ...)
+	return self.socket[key](self.socket, ...)
     end
+end
 
-    function copas.tcpwrap(skt)
-	if not copasmeta then
-	    local meta = getmetatable(copas.wrap(skt))
-	    copasmeta = {}
-	    for k,v in pairs(meta) do
+function wrapped.settimeout(self, timeout)
+    self.timeout = timeout
+    return 1
+end
+
+function wrapped.receive(self, pattern, prefix)
+    if self.timeout == 0 then
+	local s, err, part = copas.receivePartial(self.socket, pattern)
+	if not s and prefix and part then
+	    return s, err, prefix .. part
+	end
+	return s, err, part
+    end
+    return copas.receive(self.socket, pattern, prefix)
+end
+
+function wrapped.connect(self, host, port)
+    return copas.connect(self.socket, host, port)
+end
+
+local function lookup(self, key)
+    local v = wrapped[key]
+    if v ~= nil then
+	return v
+    end
+    if type(copas_org_index) == "function" then
+	v = copas_org_index(self, key)
+    else
+	v = copas_org_index[key]
+    end
+    if type(v) == "function" then
+	wrapped[key] = v
+    end
+    if v ~= nil then
+	return v
+    end
+    v = self.socket[key]
+    if type(v) == "function" then
+	v = create_wrapped(key)
+	wrapped[key] = v
+    end
+    return v
+end
+
+function copas.tcpwrap(skt)
+    local wrapped = copas.wrap(skt)
+    if not copasmeta then
+	copasmeta = {}
+	local meta = getmetatable(wrapped)
+	for k,v in pairs(meta) do
+	    if k ~= "__index" then
 		copasmeta[k] = v
 	    end
-	    copasmeta.__index.receive = tcpreceive
 	end
-	return setmetatable({socket = skt}, copasmeta)
+	copas_org_index = meta.__index
+	copasmeta.__index = lookup
     end
-end
-
-local wrapped_connect
-do
-    local function handle_connect(self, ...)
-	self.wrapped = copas.tcpwrap(self.skt)
-	self.skt:settimeout(0)
-	return ...
-    end
-
-    function wrapped_connect(self, ...)
-	return handle_connect(self, self.skt:connect(...))
-    end
-end
-
-local meta = {}
-
-meta.copasmeth = {}
-meta.plainmeth = {}
-
-local function create_method(src, key)
-    if src == 'copasmeth' then
-	return function(self, ...)
-	    return self.wrapped[key](self.wrapped, ...)
-	end
-    elseif src == 'plainmeth' then
-	return function(self, ...)
-	    return self.skt[key](self.skt, ...)
-	end
-    end
-end
-
-function meta:__index(key)
-    if key == "connect" then
-	return wrapped_connect
-    elseif key == "wrapped" or key == "skt" then
-	return
-    end
-    local value = self.wrapped and self.wrapped[key]
-    local src = 'copasmeth'
-    if value == nil then
-	value = self.skt and self.skt[key]
-	src = 'plainmeth'
-    end
-    if type(value) ~= 'function' then
-	return value
-    end
-    local cachemeth = meta[src]
-    local wrapmeth = cachemeth[key]
-    if not wrapmeth then
-	wrapmeth = create_method(src, key)
-	cachemeth[key] = wrapmeth
-    end
-    return wrapmeth
+    setmetatable(wrapped, copasmeta)
+    return wrapped
 end
 
 -- Wrap TCP socket creation/connection so it works inside COPAS
@@ -92,7 +82,7 @@ local function wraptcp()
     if not tcpskt then
 	return tcpskt, err
     end
-    return setmetatable({ skt = tcpskt }, meta)
+    return copas.tcpwrap(tcpskt)
 end
 
 return wraptcp

@@ -1,4 +1,4 @@
-local server = require "webmeet.server"
+local server = require "webmeet.responder"
 local poster = require "webmeet.poster"
 local getter = require "webmeet.getter"
 local copas = require "copas"
