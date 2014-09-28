@@ -21,6 +21,15 @@ build = {
     },
     lua = {
       ["webecho"] = "src/webecho.lua",
+      ["webmeet.incoming"] = "src/webmeet/incoming.lua",
+      ["webmeet.outgoing"] = "src/webmeet/outgoing.lua",
+      ["webmeet.wraptcp"] = "src/webmeet/wraptcp.lua",
+      ["webmeet.wraphttp"] = "src/webmeet/wraphttp.lua",
+      ["webmeet.queue"] = "src/webmeet/queue.lua",
+      ["webmeet.poster"] = "src/webmeet/poster.lua",
+      ["webmeet.getter"] = "src/webmeet/getter.lua",
+      ["webmeet.client"] = "src/webmeet/client.lua",
+      ["webmeet.server"] = "src/webmeet/server.lua",
     },
   },
 }

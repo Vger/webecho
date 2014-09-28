@@ -88,8 +88,7 @@ local function handle_post_chunk(req, res, length)
     for receiver_req in receivers_iterator(req.relpath) do
 	local co = receiver_req.me
 	if co then
-	    msg = msg or format('%x\r\n%s\r\n', #body, body)
-	    receiver_req.waked = msg
+	    receiver_req.waked = body
 	    copas.wakeup(receiver_req.me)
 	end
     end
