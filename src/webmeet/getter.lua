@@ -4,8 +4,7 @@ local copas = require "copas"
 local http = require "webmeet.wraphttp"
 local construct
 
--- Returns a function for setting the sink of this HTTP getter.
-function construct(get_request)
+local function adapt_request(get_request)
     if type(get_request) == "string" then
 	local u = get_request
 	get_request = {
@@ -17,8 +16,13 @@ function construct(get_request)
 	    },
 	}
     end
+    return get_request
+end
 
+-- Returns a function for setting the sink of this HTTP getter.
+function construct(get_request)
     local sink = nil
+    get_request = adapt_request(get_request)
     get_request.sink = function(chunk, src_err)
 	if not sink then
 	    return nil

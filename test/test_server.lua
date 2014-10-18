@@ -1,19 +1,23 @@
-local server = require "webmeet.responder"
-local poster = require "webmeet.poster"
-local getter = require "webmeet.getter"
+local sub = require "webmeet.incoming"
+local pub = require "webmeet.outgoing"
 local copas = require "copas"
 
 local getrequest = "http://127.0.0.1:8888/clientreq/"
 local postreply = "http://127.0.0.1:8888/serverrep/"
 
-local myserver = server(poster(postreply), getter(getrequest))
+local myserver = sub(getrequest)
+local myreply = pub(postreply)
+local mainloop
 
-myserver:set_notify(function()
-    local data, id = myserver:get()
-    print(data, id)
+function mainloop()
+    local data = myserver:recv(true)
+    print(os.date(), "Got data from client: ", data)
     if data then
-	myserver:reply(id, "Hi")
+	assert(myreply:send("Hi"))
+	assert(myreply:send("Again"))
     end
-end)
+    return mainloop()
+end
 
+copas.addthread(mainloop)
 copas.loop()

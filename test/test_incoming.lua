@@ -1,9 +1,5 @@
 local ltn12 = require "ltn12"
-local remotedata = require "webmeet.incoming"
-
-local emitted
-local sink
-local source
+local incoming = require "webmeet.incoming"
 
 local faults = 0
 
@@ -12,29 +8,35 @@ local function myerror(...)
     print(...)
 end
 
-local results = {}
-function emitted(reqid, data)
-    if reqid == nil then
-	if data then
-	    myerror("Got error in ltn12 pump/source: \"" .. tostring(data) .. "\"")
-	end
-	return true
+local function mainwork()
+    local sink, err = incoming(function() end)
+    if not sink then
+	myerror(err or "Sink could not be created")
+	return
     end
-    results[#results + 1] = { reqid, data }
-    return true
+    local source = ltn12.source.string(string.char(1) .. "a"
+    .. string.char(3) .. "lol"
+    .. string.char(130,3) .. string.rep("nothing", 55) .. "B"
+    )
+    ltn12.pump.all(source, sink)
+
+    local results = {}
+    while true do
+	local data = sink:recv()
+	if not data then
+	    break
+	end
+	results[#results + 1] = data
+    end
+    return results
 end
 
-sink = remotedata(emitted)
-source = ltn12.source.string(string.char(0, 1) .. "a"
-.. string.char(5, 3) .. "lol"
-.. string.char(134, 3, 7) .. "nothing"
-)
-ltn12.pump.all(source, sink)
+local results = mainwork()
 
 local expect_results = {
-    { 0, "a" },
-    { 5, "lol" },
-    { 390, "nothing" },
+    "a",
+    "lol",
+    string.rep("nothing", 55) .. "B",
 }
 
 local num_results = #results
@@ -46,23 +48,10 @@ if num_results ~= #expect_results then
 end
 
 for i = 1, num_results do
-    local result = results[i]
-    local expected_result = expect_results[i]
-    local reqid, data
-    local expect_reqid, expect_data
-    if result then
-	reqid, data = result[1], result[2]
-    end
-    if expected_result then
-	expect_reqid, expect_data = expected_result[1], expected_result[2]
-    end
-
-    if reqid ~= expect_reqid then
-	myerror("Item #" .. tostring(i) .. ": " .. "Request id: " .. tostring(reqid) .. " Expected: " .. tostring(expect_reqid))
-    end
+    local data = results[i]
+    local expect_data = expect_results[i]
     if data ~= expect_data then
-	myerror("Item #" .. tostirng(i) .. ": " .. "Data: " .. tostring(data) .. " Expected: " .. tostring(expect_data))
-
+	myerror("Item #" .. tostring(i) .. ": " .. "Data: " .. tostring(data) .. " Expected: " .. tostring(expect_data))
     end
 end
 

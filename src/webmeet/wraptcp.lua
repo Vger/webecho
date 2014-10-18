@@ -1,6 +1,5 @@
--- Create TCP socket that automatically promotes to a COPAS tcp socket
--- when connecting to an endpoint. This means it'll be usable inside
--- a COPAS thread.
+-- Small adaptations that makes API to wrapped COPAS sockets more similar to
+-- ordinary luasockets.
 
 local socket = require "socket"
 local copas = require "copas"
@@ -32,7 +31,13 @@ function wrapped.receive(self, pattern, prefix)
 end
 
 function wrapped.connect(self, host, port)
-    return copas.connect(self.socket, host, port)
+    local success, err = copas.connect(self.socket, host, port)
+    if not success then
+	if err == "already connected" then
+	    return 1
+	end
+    end
+    return success, err
 end
 
 local function lookup(self, key)
