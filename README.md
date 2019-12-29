@@ -13,7 +13,7 @@ $ path/to/deploy/directory/bin/westandalone.lua
 
 Open two new terminal windows and execute in each window (GET request):
 ```
-$ curl http://127.0.0.1:8888/myecho/
+$ curl --raw http://127.0.0.1:8888/myecho/
 ```
 
 Open a new terminal window and execute (POST requests):
